@@ -3,6 +3,7 @@
 module Ldap.Client.Internal
   ( Host(..)
   , PortNumber
+  , LdapHandle(..)
   , Ldap(..)
   , ClientMessage(..)
   , Type.ResultCode(..)
@@ -36,7 +37,7 @@ import           Data.List.NonEmpty (NonEmpty)
 import           Data.Text (Text)
 import           Data.Typeable (Typeable)
 import           Network (PortNumber)
-import           Network.Connection (TLSSettings)
+import           Network.Connection (TLSSettings, Connection)
 
 import qualified Ldap.Asn1.Type as Type
 
@@ -46,6 +47,11 @@ data Host =
     Plain String           -- ^ Plain LDAP.
   | Tls String TLSSettings -- ^ LDAP over TLS.
     deriving (Show)
+
+-- | A connection handle for manual resource management
+data LdapHandle s = LdapHandle { token :: !(Ldap s)
+                               , conn  :: !Connection
+                               }
 
 -- | A token. All functions that interact with the Directory require one.
 newtype Ldap s = Ldap

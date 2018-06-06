@@ -16,6 +16,8 @@ module Ldap.Client
   , insecureTlsSettings
   , PortNumber
   , Ldap
+  , LdapHandle
+  , ldapToken
   , LdapError(..)
   , ResponseError(..)
   , Type.ResultCode(..)
@@ -138,28 +140,19 @@ data Disconnect = Disconnect !Type.ResultCode !Dn !Text
 
 instance Exception Disconnect
 
--- | The entrypoint into LDAP.
+ldapToken :: LdapHandle s -> Ldap s
+ldapToken (LdapHandle ldap _conn) = ldap
+
+-- | Opens an LDAP Handle.
 --
--- It catches all LDAP-related exceptions.
-with :: Host -> PortNumber -> (forall s. Ldap s -> IO a) -> IO (Either LdapError a)
-with host port f = do
+-- Caution: You must use the LdapHandle in the same thread that closes it.
+-- This makes it unusable to be used with external resource solutions like `resource-pool`
+open :: Host -> PortNumber -> IO (LdapHandle s)
+open host port = do
   context <- Conn.initConnectionContext
-  bracket (Conn.connectTo context params) Conn.connectionClose (\conn ->
-    bracket newLdap unbindAsync (\l -> do
-      inq  <- newTQueueIO
-      outq <- newTQueueIO
-      as   <- traverse Async.async
-        [ input inq conn
-        , output outq conn
-        , dispatch l inq outq
-        , f l
-        ]
-      fmap (Right . snd) (Async.waitAnyCancel as)))
- `catches`
-  [ Handler (\(WrappedIOError e) -> return (Left (IOError e)))
-  , Handler (return . Left . ParseError)
-  , Handler (return . Left . ResponseError)
-  ]
+  connection <- Conn.connectTo context params
+  ldap <- newLdap
+  pure (LdapHandle ldap connection)
  where
   params = Conn.ConnectionParams
     { Conn.connectionHostname =
@@ -173,6 +166,35 @@ with host port f = do
           Tls _ settings -> pure settings
     , Conn.connectionUseSocks = Nothing
     }
+
+close :: LdapHandle s -> IO ()
+close (LdapHandle token conn) = do
+  unbindAsync token
+  Conn.connectionClose conn
+
+-- | The entrypoint into LDAP.
+--
+-- It catches all LDAP-related exceptions.
+with :: Host -> PortNumber -> (forall s. Ldap s -> IO a) -> IO (Either LdapError a)
+with host port f = execute `catches` handlers
+  where
+    execute = do
+      bracket (open host port) close $ \(LdapHandle l conn) -> do
+        inq  <- newTQueueIO
+        outq <- newTQueueIO
+        as   <- traverse Async.async
+          [ input inq conn
+          , output outq conn
+          , dispatch l inq outq
+          , f l
+          ]
+        fmap (Right . snd) (Async.waitAnyCancel as)
+
+    handlers :: [Handler (Either LdapError b)]
+    handlers = [ Handler (\(WrappedIOError e) -> return (Left (IOError e)))
+              , Handler (return . Left . ParseError)
+              , Handler (return . Left . ResponseError)
+              ]
 
 defaultTlsSettings :: Conn.TLSSettings
 defaultTlsSettings = Conn.TLSSettingsSimple
