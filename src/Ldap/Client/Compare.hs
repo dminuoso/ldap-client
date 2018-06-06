@@ -31,19 +31,19 @@ import qualified Ldap.Asn1.Type as Type
 
 
 -- | Perform the Compare operation synchronously. Raises 'ResponseError' on failures.
-compare :: Ldap -> Dn -> Attr -> AttrValue -> IO Bool
+compare :: Ldap s -> Dn -> Attr -> AttrValue -> IO Bool
 compare l dn k v =
   raise =<< compareEither l dn k v
 
 -- | Perform the Compare operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
-compareEither :: Ldap -> Dn -> Attr -> AttrValue -> IO (Either ResponseError Bool)
+compareEither :: Ldap s -> Dn -> Attr -> AttrValue -> IO (Either ResponseError Bool)
 compareEither l dn k v =
   wait =<< compareAsync l dn k v
 
 -- | Perform the Compare operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-compareAsync :: Ldap -> Dn -> Attr -> AttrValue -> IO (Async Bool)
+compareAsync :: Ldap s -> Dn -> Attr -> AttrValue -> IO (Async Bool)
 compareAsync l dn k v =
   atomically (compareAsyncSTM l dn k v)
 
@@ -51,7 +51,7 @@ compareAsync l dn k v =
 --
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
-compareAsyncSTM :: Ldap -> Dn -> Attr -> AttrValue -> STM (Async Bool)
+compareAsyncSTM :: Ldap s -> Dn -> Attr -> AttrValue -> STM (Async Bool)
 compareAsyncSTM l dn k v =
   let req = compareRequest dn k v in sendRequest l (compareResult req) req
 

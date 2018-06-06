@@ -50,14 +50,14 @@ import           Ldap.Client.Internal
 
 
 -- | Perform the Search operation synchronously. Raises 'ResponseError' on failures.
-search :: Ldap -> Dn -> Mod Search -> Filter -> [Attr] -> IO [SearchEntry]
+search :: Ldap s -> Dn -> Mod Search -> Filter -> [Attr] -> IO [SearchEntry]
 search l base opts flt attributes =
   raise =<< searchEither l base opts flt attributes
 
 -- | Perform the Search operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
 searchEither
-  :: Ldap
+  :: Ldap s
   -> Dn
   -> Mod Search
   -> Filter
@@ -68,7 +68,7 @@ searchEither l base opts flt attributes =
 
 -- | Perform the Search operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-searchAsync :: Ldap -> Dn -> Mod Search -> Filter -> [Attr] -> IO (Async [SearchEntry])
+searchAsync :: Ldap s -> Dn -> Mod Search -> Filter -> [Attr] -> IO (Async [SearchEntry])
 searchAsync l base opts flt attributes =
   atomically (searchAsyncSTM l base opts flt attributes)
 
@@ -77,7 +77,7 @@ searchAsync l base opts flt attributes =
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
 searchAsyncSTM
-  :: Ldap
+  :: Ldap s
   -> Dn
   -> Mod Search
   -> Filter

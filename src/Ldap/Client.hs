@@ -2,6 +2,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+
 -- | This module is intended to be imported qualified
 --
 -- @
@@ -114,7 +116,7 @@ import           Ldap.Client.Extended (Oid(..), extended, noticeOfDisconnectionO
 {-# ANN module ("HLint: ignore Use first" :: String) #-}
 
 
-newLdap :: IO Ldap
+newLdap :: IO (Ldap s)
 newLdap = Ldap
   <$> newTQueueIO
 
@@ -139,7 +141,7 @@ instance Exception Disconnect
 -- | The entrypoint into LDAP.
 --
 -- It catches all LDAP-related exceptions.
-with :: Host -> PortNumber -> (Ldap -> IO a) -> IO (Either LdapError a)
+with :: Host -> PortNumber -> (forall s. Ldap s -> IO a) -> IO (Either LdapError a)
 with host port f = do
   context <- Conn.initConnectionContext
   bracket (Conn.connectTo context params) Conn.connectionClose (\conn ->
@@ -214,7 +216,7 @@ output out conn = wrap . forever $ do
   encode x = Asn1.encodeASN1' Asn1.DER (appEndo x [])
 
 dispatch
-  :: Ldap
+  :: Ldap s
   -> TQueue (Type.LdapMessage Type.ProtocolServerOp)
   -> TQueue (Type.LdapMessage Request)
   -> IO a

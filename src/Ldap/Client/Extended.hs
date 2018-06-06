@@ -52,19 +52,19 @@ instance IsString Oid where
     Oid . fromString
 
 -- | Perform the Extended operation synchronously. Raises 'ResponseError' on failures.
-extended :: Ldap -> Oid -> Maybe ByteString -> IO ()
+extended :: Ldap s -> Oid -> Maybe ByteString -> IO ()
 extended l oid mv =
   raise =<< extendedEither l oid mv
 
 -- | Perform the Extended operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
-extendedEither :: Ldap -> Oid -> Maybe ByteString -> IO (Either ResponseError ())
+extendedEither :: Ldap s -> Oid -> Maybe ByteString -> IO (Either ResponseError ())
 extendedEither l oid mv =
   wait =<< extendedAsync l oid mv
 
 -- | Perform the Extended operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-extendedAsync :: Ldap -> Oid -> Maybe ByteString -> IO (Async ())
+extendedAsync :: Ldap s -> Oid -> Maybe ByteString -> IO (Async ())
 extendedAsync l oid mv =
   atomically (extendedAsyncSTM l oid mv)
 
@@ -72,7 +72,7 @@ extendedAsync l oid mv =
 --
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
-extendedAsyncSTM :: Ldap -> Oid -> Maybe ByteString -> STM (Async ())
+extendedAsyncSTM :: Ldap s -> Oid -> Maybe ByteString -> STM (Async ())
 extendedAsyncSTM l oid mv =
   let req = extendedRequest oid mv in sendRequest l (extendedResult req) req
 
@@ -90,22 +90,22 @@ extendedResult req res = Left (ResponseInvalid req res)
 
 
 -- | An example of @Extended Operation@, cf. 'extended'.
-startTls :: Ldap -> IO ()
+startTls :: Ldap s -> IO ()
 startTls =
   raise <=< startTlsEither
 
 -- | An example of @Extended Operation@, cf. 'extendedEither'.
-startTlsEither :: Ldap -> IO (Either ResponseError ())
+startTlsEither :: Ldap s -> IO (Either ResponseError ())
 startTlsEither =
   wait <=< startTlsAsync
 
 -- | An example of @Extended Operation@, cf. 'extendedAsync'.
-startTlsAsync :: Ldap -> IO (Async ())
+startTlsAsync :: Ldap s -> IO (Async ())
 startTlsAsync =
   atomically . startTlsAsyncSTM
 
 -- | An example of @Extended Operation@, cf. 'extendedAsyncSTM'.
-startTlsAsyncSTM :: Ldap -> STM (Async ())
+startTlsAsyncSTM :: Ldap s -> STM (Async ())
 startTlsAsyncSTM l =
   extendedAsyncSTM l startTlsOid Nothing
 

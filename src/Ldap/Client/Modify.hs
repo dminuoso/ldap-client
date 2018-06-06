@@ -46,19 +46,19 @@ data Operation =
     deriving (Show, Eq)
 
 -- | Perform the Modify operation synchronously. Raises 'ResponseError' on failures.
-modify :: Ldap -> Dn -> [Operation] -> IO ()
+modify :: Ldap s -> Dn -> [Operation] -> IO ()
 modify l dn as =
   raise =<< modifyEither l dn as
 
 -- | Perform the Modify operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
-modifyEither :: Ldap -> Dn -> [Operation] -> IO (Either ResponseError ())
+modifyEither :: Ldap s -> Dn -> [Operation] -> IO (Either ResponseError ())
 modifyEither l dn as =
   wait =<< modifyAsync l dn as
 
 -- | Perform the Modify operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-modifyAsync :: Ldap -> Dn -> [Operation] -> IO (Async ())
+modifyAsync :: Ldap s -> Dn -> [Operation] -> IO (Async ())
 modifyAsync l dn as =
   atomically (modifyAsyncSTM l dn as)
 
@@ -66,7 +66,7 @@ modifyAsync l dn as =
 --
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
-modifyAsyncSTM :: Ldap -> Dn -> [Operation] -> STM (Async ())
+modifyAsyncSTM :: Ldap s -> Dn -> [Operation] -> STM (Async ())
 modifyAsyncSTM l dn xs =
   let req = modifyRequest dn xs in sendRequest l (modifyResult req) req
 
@@ -96,19 +96,19 @@ newtype RelativeDn = RelativeDn Text
     deriving (Show, Eq)
 
 -- | Perform the Modify DN operation synchronously. Raises 'ResponseError' on failures.
-modifyDn :: Ldap -> Dn -> RelativeDn -> Bool -> Maybe Dn -> IO ()
+modifyDn :: Ldap s -> Dn -> RelativeDn -> Bool -> Maybe Dn -> IO ()
 modifyDn l dn rdn del new =
   raise =<< modifyDnEither l dn rdn del new
 
 -- | Perform the Modify DN operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
-modifyDnEither :: Ldap -> Dn -> RelativeDn -> Bool -> Maybe Dn -> IO (Either ResponseError ())
+modifyDnEither :: Ldap s -> Dn -> RelativeDn -> Bool -> Maybe Dn -> IO (Either ResponseError ())
 modifyDnEither l dn rdn del new =
   wait =<< modifyDnAsync l dn rdn del new
 
 -- | Perform the Modify DN operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-modifyDnAsync :: Ldap -> Dn -> RelativeDn -> Bool -> Maybe Dn -> IO (Async ())
+modifyDnAsync :: Ldap s -> Dn -> RelativeDn -> Bool -> Maybe Dn -> IO (Async ())
 modifyDnAsync l dn rdn del new =
   atomically (modifyDnAsyncSTM l dn rdn del new)
 
@@ -116,7 +116,7 @@ modifyDnAsync l dn rdn del new =
 --
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
-modifyDnAsyncSTM :: Ldap -> Dn -> RelativeDn -> Bool -> Maybe Dn -> STM (Async ())
+modifyDnAsyncSTM :: Ldap s -> Dn -> RelativeDn -> Bool -> Maybe Dn -> STM (Async ())
 modifyDnAsyncSTM l dn rdn del new =
   let req = modifyDnRequest dn rdn del new in sendRequest l (modifyDnResult req) req
 

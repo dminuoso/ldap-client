@@ -48,7 +48,7 @@ data Host =
     deriving (Show)
 
 -- | A token. All functions that interact with the Directory require one.
-newtype Ldap = Ldap
+newtype Ldap s = Ldap
   { client  :: TQueue ClientMessage
   } deriving (Eq)
 
@@ -104,13 +104,13 @@ wait = atomically . waitSTM
 waitSTM :: Async a -> STM (Either ResponseError a)
 waitSTM (Async stm) = stm
 
-sendRequest :: Ldap -> (Response -> Either ResponseError a) -> Request -> STM (Async a)
+sendRequest :: Ldap s -> (Response -> Either ResponseError a) -> Request -> STM (Async a)
 sendRequest l p msg =
   do var <- newEmptyTMVar
      writeRequest l var msg
      return (Async (fmap p (readTMVar var)))
 
-writeRequest :: Ldap -> TMVar Response -> Request -> STM ()
+writeRequest :: Ldap s -> TMVar Response -> Request -> STM ()
 writeRequest Ldap { client } var msg = writeTQueue client (New msg var)
 
 raise :: Exception e => Either e a -> IO a
@@ -123,7 +123,7 @@ raise = either throwIO return
 -- because LDAP server never responds to @UnbindRequest@s, hence
 -- a call to 'wait' on a hypothetical 'Async' would have resulted
 -- in an exception anyway.
-unbindAsync :: Ldap -> IO ()
+unbindAsync :: Ldap s -> IO ()
 unbindAsync =
   atomically . unbindAsyncSTM
 
@@ -133,7 +133,7 @@ unbindAsync =
 -- because LDAP server never responds to @UnbindRequest@s, hence
 -- a call to 'wait' on a hypothetical 'Async' would have resulted
 -- in an exception anyway.
-unbindAsyncSTM :: Ldap -> STM ()
+unbindAsyncSTM :: Ldap s -> STM ()
 unbindAsyncSTM l =
   void (sendRequest l die Type.UnbindRequest)
  where

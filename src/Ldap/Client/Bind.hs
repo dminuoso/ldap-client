@@ -40,19 +40,19 @@ newtype Password = Password ByteString
     deriving (Show, Eq)
 
 -- | Perform the Bind operation synchronously. Raises 'ResponseError' on failures.
-bind :: Ldap -> Dn -> Password -> IO ()
+bind :: Ldap s -> Dn -> Password -> IO ()
 bind l username password =
   raise =<< bindEither l username password
 
 -- | Perform the Bind operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
-bindEither :: Ldap -> Dn -> Password -> IO (Either ResponseError ())
+bindEither :: Ldap s -> Dn -> Password -> IO (Either ResponseError ())
 bindEither l username password =
   wait =<< bindAsync l username password
 
 -- | Perform the Bind operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-bindAsync :: Ldap -> Dn -> Password -> IO (Async ())
+bindAsync :: Ldap s -> Dn -> Password -> IO (Async ())
 bindAsync l username password =
   atomically (bindAsyncSTM l username password)
 
@@ -60,7 +60,7 @@ bindAsync l username password =
 --
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
-bindAsyncSTM :: Ldap -> Dn -> Password -> STM (Async ())
+bindAsyncSTM :: Ldap s -> Dn -> Password -> STM (Async ())
 bindAsyncSTM l username password =
   let req = bindRequest username password in sendRequest l (bindResult req) req
 
@@ -80,19 +80,19 @@ bindResult req (Type.BindResponse (Type.LdapResult code (Type.LdapDn (Type.LdapS
 bindResult req res = Left (ResponseInvalid req res)
 
 -- | Perform a SASL EXTERNAL Bind operation synchronously. Raises 'ResponseError' on failures.
-externalBind :: Ldap -> Dn -> Maybe Text -> IO ()
+externalBind :: Ldap s -> Dn -> Maybe Text -> IO ()
 externalBind l username mCredentials =
   raise =<< externalBindEither l username mCredentials
 
 -- | Perform a SASL EXTERNAL Bind operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
-externalBindEither :: Ldap -> Dn -> Maybe Text -> IO (Either ResponseError ())
+externalBindEither :: Ldap s -> Dn -> Maybe Text -> IO (Either ResponseError ())
 externalBindEither l username mCredentials =
   wait =<< externalBindAsync l username mCredentials
 
 -- | Perform the SASL EXTERNAL Bind operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-externalBindAsync :: Ldap -> Dn -> Maybe Text -> IO (Async ())
+externalBindAsync :: Ldap s -> Dn -> Maybe Text -> IO (Async ())
 externalBindAsync l username mCredentials =
   atomically (externalBindAsyncSTM l username mCredentials)
 
@@ -100,7 +100,7 @@ externalBindAsync l username mCredentials =
 --
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
-externalBindAsyncSTM :: Ldap -> Dn -> Maybe Text -> STM (Async ())
+externalBindAsyncSTM :: Ldap s -> Dn -> Maybe Text -> STM (Async ())
 externalBindAsyncSTM l username mCredentials =
   let req = externalBindRequest username mCredentials in sendRequest l (bindResult req) req
 

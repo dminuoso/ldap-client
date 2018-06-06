@@ -29,19 +29,19 @@ import           Ldap.Client.Internal
 
 
 -- | Perform the Delete operation synchronously. Raises 'ResponseError' on failures.
-delete :: Ldap -> Dn -> IO ()
+delete :: Ldap s -> Dn -> IO ()
 delete l dn =
   raise =<< deleteEither l dn
 
 -- | Perform the Delete operation synchronously. Returns @Left e@ where
 -- @e@ is a 'ResponseError' on failures.
-deleteEither :: Ldap -> Dn -> IO (Either ResponseError ())
+deleteEither :: Ldap s -> Dn -> IO (Either ResponseError ())
 deleteEither l dn =
   wait =<< deleteAsync l dn
 
 -- | Perform the Delete operation asynchronously. Call 'Ldap.Client.wait' to wait
 -- for its completion.
-deleteAsync :: Ldap -> Dn -> IO (Async ())
+deleteAsync :: Ldap s -> Dn -> IO (Async ())
 deleteAsync l dn =
   atomically (deleteAsyncSTM l dn)
 
@@ -49,7 +49,7 @@ deleteAsync l dn =
 --
 -- Don't wait for its completion (with 'Ldap.Client.waitSTM') in the
 -- same transaction you've performed it in.
-deleteAsyncSTM :: Ldap -> Dn -> STM (Async ())
+deleteAsyncSTM :: Ldap s -> Dn -> STM (Async ())
 deleteAsyncSTM l dn =
   let req = deleteRequest dn in sendRequest l (deleteResult req) req
 
